@@ -7,6 +7,8 @@ const User = require("../../Models/User");
 const bcrypt = require("bcrypt");
 const JwtService = require("../../services/JwtServices");
 const DTOS = require("../../services/DTOS");
+const sendEmail = require("../../services/EmailService");
+const crypto = require("crypto");
 
 function authController() {
   return {
@@ -56,6 +58,7 @@ function authController() {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
+        const randomStr = crypto.randomBytes(16).toString("hex");
         const createUser = new User({
           firstName,
           lastName,
@@ -66,12 +69,17 @@ function authController() {
           town,
           city,
           province,
+          verificationToken: randomStr,
         });
 
         const result = await createUser.save();
         if (!result) {
           return ErrorMessages(res);
         }
+        await sendEmail(
+          email,
+          `Welcome to shoplify Mr.${firstName} ${lastName}. To verify Your account please click on the link http://localhost:8000/api/v1/auth/verify/${randomStr}`
+        );
         return SuccessMessages(res);
       } catch (error) {
         return ErrorMessages(res);
@@ -137,6 +145,21 @@ function authController() {
         res.clearCookie("refreshtoken");
         return SuccessMessages(res, "Logout Successfully");
       } catch (err) {
+        return ErrorMessages(res);
+      }
+    },
+    verifyEmail: async (req, res) => {
+      const { verifyToken } = req.params;
+      try {
+        const user = await User.findOne({ verificationToken: verifyToken });
+        if (!user) {
+          return ErrorMessages(res, 404, "Invalid token. User not found");
+        }
+        user.isVerified = true;
+        user.verificationToken = null;
+        await user.save();
+        return SuccessMessages(res);
+      } catch (error) {
         return ErrorMessages(res);
       }
     },

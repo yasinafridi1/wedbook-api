@@ -1,0 +1,8 @@
+[+] : register user
+[+] : login user
+[+] : send verification email
+[+] : verify user email 
+[-] : logout 
+[-] : Auto login 
+[-] : forget password
+
